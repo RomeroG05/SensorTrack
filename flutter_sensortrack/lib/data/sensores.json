@@ -1,0 +1,29 @@
+[
+  {
+    "id": "accelerometer",
+    "nombre": "Acelerómetro",
+    "descripcion": "Aceleración en X, Y, Z",
+    "aplicacion": "Detectar movimiento del dispositivo",
+    "unidad": "m/s²",
+    "icono": "acelerometro",
+    "color": "0xFF1E88E5"
+  },
+  {
+    "id": "gyroscope",
+    "nombre": "Giroscopio",
+    "descripcion": "Velocidad angular X, Y, Z",
+    "aplicacion": "Detectar rotaciones",
+    "unidad": "rad/s",
+    "icono": "giroscopio",
+    "color": "0xFF8E24AA"
+  },
+  {
+    "id": "gps",
+    "nombre": "GPS / ubicación",
+    "descripcion": "Latitud, longitud y precisión",
+    "aplicacion": "Obtener ubicación geográfica",
+    "unidad": "m",
+    "icono": "gps",
+    "color": "0xFF43A047"
+  }
+]

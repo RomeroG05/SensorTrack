@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Conexión con Supabase -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- GPS (se solicita en tiempo de ejecución desde la pantalla Ubicación) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
-        android:label="flutter_sensortrack"
+        android:label="SensorTrack"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
