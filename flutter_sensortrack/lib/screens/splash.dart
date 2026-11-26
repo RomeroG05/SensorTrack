@@ -26,7 +26,10 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.sensors, size: 96, color: colores.onPrimary),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Image.asset('assets/icon/icon.png', width: 120),
+            ),
             const SizedBox(height: 16),
             Text(
               'SensorTrack',

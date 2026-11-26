@@ -50,6 +50,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     final acel = lecturas
         .where((l) => l.sensorType == 'accelerometer')
         .toList();
+    final giro = lecturas.where((l) => l.sensorType == 'gyroscope').toList();
     final gps = lecturas.where((l) => l.sensorType == 'gps').toList();
 
     String minimo(Iterable<double> v) =>
@@ -86,42 +87,67 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
           ],
         ]),
         _tarjeta('Evolución del acelerómetro (últimas 30)', [
-          SizedBox(
-            height: 220,
-            child: _grafico(acel.take(30).toList().reversed.toList()),
-          ),
+          _grafico(_ultimas(acel), _ejes),
           const Text('Rojo: X   Verde: Y   Azul: Z'),
+        ]),
+        _tarjeta('Evolución del giroscopio (últimas 30)', [
+          _grafico(_ultimas(giro), _ejes),
+          const Text('Rojo: X   Verde: Y   Azul: Z'),
+        ]),
+        _tarjeta('Evolución de la precisión GPS (últimas 30)', [
+          _grafico(_ultimas(gps), [((l) => l.accuracy, Colors.teal)]),
+          const Text('Precisión en metros (menor es mejor)'),
         ]),
       ],
     );
   }
 
-  /// Gráfico de líneas con los ejes X, Y, Z en orden cronológico.
-  Widget _grafico(List<Lectura> datos) {
-    if (datos.isEmpty) return const Center(child: Text('Sin datos'));
+  /// Líneas de los ejes X (rojo), Y (verde) y Z (azul).
+  static final List<(double? Function(Lectura), Color)> _ejes = [
+    ((l) => l.x, Colors.red),
+    ((l) => l.y, Colors.green),
+    ((l) => l.z, Colors.blue),
+  ];
 
-    LineChartBarData linea(double? Function(Lectura) valor, Color color) {
+  /// Últimas 30 lecturas en orden cronológico (llegan de la más reciente).
+  List<Lectura> _ultimas(List<Lectura> lecturas) =>
+      lecturas.take(30).toList().reversed.toList();
+
+  /// Gráfico de líneas: una línea por cada (valor, color) de [series].
+  Widget _grafico(
+    List<Lectura> datos,
+    List<(double? Function(Lectura), Color)> series,
+  ) {
+    if (datos.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: Text('Sin datos')),
+      );
+    }
+
+    LineChartBarData linea((double? Function(Lectura), Color) serie) {
+      final (valor, color) = serie;
       return LineChartBarData(
         spots: [
           for (var i = 0; i < datos.length; i++)
-            FlSpot(i.toDouble(), valor(datos[i])!),
+            FlSpot(i.toDouble(), valor(datos[i]) ?? 0),
         ],
         color: color,
         dotData: const FlDotData(show: false),
       );
     }
 
-    return LineChart(
-      LineChartData(
-        lineBarsData: [
-          linea((l) => l.x, Colors.red),
-          linea((l) => l.y, Colors.green),
-          linea((l) => l.z, Colors.blue),
-        ],
-        titlesData: const FlTitlesData(
-          topTitles: AxisTitles(),
-          rightTitles: AxisTitles(),
-          bottomTitles: AxisTitles(),
+    return Container(
+      height: 200,
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      child: LineChart(
+        LineChartData(
+          lineBarsData: series.map(linea).toList(),
+          titlesData: const FlTitlesData(
+            topTitles: AxisTitles(),
+            rightTitles: AxisTitles(),
+            bottomTitles: AxisTitles(),
+          ),
         ),
       ),
     );

@@ -15,7 +15,7 @@ Aplicación móvil hecha con **Flutter** que lee los sensores del teléfono (ace
 | **Sensores** | Ver X, Y, Z del acelerómetro y el giroscopio en tiempo real. Guardar una medición o activar el guardado automático cada 5 segundos. |
 | **Ubicación** | Obtener latitud, longitud, precisión y hora. Guardarla en Supabase, siempre después de confirmar. |
 | **Historial** | Ver todas las mediciones guardadas y tocar una para ver su detalle. |
-| **Estadísticas** | Ver el total de registros, los registros por sensor, el mínimo y el máximo del acelerómetro, la última ubicación y un gráfico. |
+| **Estadísticas** | Ver el total de registros, los registros por sensor, el mínimo y el máximo del acelerómetro, la última ubicación y un gráfico por sensor (acelerómetro, giroscopio y precisión del GPS). |
 
 ## Sensores
 
@@ -31,7 +31,7 @@ Aplicación móvil hecha con **Flutter** que lee los sensores del teléfono (ace
 - **Supabase**: base de datos en la nube (PostgreSQL)
 - **sensors_plus**: acelerómetro y giroscopio
 - **geolocator**: GPS y permisos de ubicación
-- **fl_chart**: gráfico de estadísticas
+- **fl_chart**: gráficos de estadísticas
 
 ---
 
@@ -166,7 +166,7 @@ flutter analyze  # revisión del código
 | Datos en tiempo real | `sensores.dart`, `ubicacion.dart` |
 | Botón "Guardar medición" y registro en Supabase | `tarjeta_sensor.dart`, `supabase_service.dart` |
 | Historial y detalle | `historial.dart`, `detalle_lectura.dart` |
-| Estadísticas y gráfico | `estadisticas.dart` |
+| Estadísticas y gráficos | `estadisticas.dart` |
 | Iniciar y detener el monitoreo | Interruptor de guardado automático |
 | Permisos, errores y privacidad | `ubicacion.dart`, `supabase_service.dart` |
 | Políticas RLS y script SQL | `sql/sensor_readings.sql` |
