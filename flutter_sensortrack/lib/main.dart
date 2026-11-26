@@ -11,13 +11,22 @@ import 'screens/detalle_lectura.dart';
 import 'screens/estadisticas.dart';
 
 // Datos del proyecto en Supabase (Project Settings → API).
-const supabaseUrl = 'URL_DE_SUPABASE';
-const supabaseKey = 'CLAVE_PUBLICA';
+const supabaseUrl = 'https://lphqukzthmwnasrqwyjd.supabase.co';
+const supabaseKey = 'sb_publishable_Q-9mKFtZD2_l-wLtjp6JGA_njKIDCXe';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await cargarDatos(); // Lee el JSON de lib/data/
+
+  await cargarDatos();
+
   await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
+
+  final supabase = Supabase.instance.client;
+
+  if (supabase.auth.currentSession == null) {
+    await supabase.auth.signInAnonymously();
+  }
+
   runApp(const MyApp());
 }
 
