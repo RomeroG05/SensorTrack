@@ -9,10 +9,11 @@ import 'screens/ubicacion.dart';
 import 'screens/historial.dart';
 import 'screens/detalle_lectura.dart';
 import 'screens/estadisticas.dart';
+import 'screens/impactos.dart';
 
 // Datos del proyecto en Supabase (Project Settings → API).
-const supabaseUrl = 'https://lphqukzthmwnasrqwyjd.supabase.co';
-const supabaseKey = 'sb_publishable_Q-9mKFtZD2_l-wLtjp6JGA_njKIDCXe';
+const supabaseUrl = 'https://ahdwvgmuhotfuqgatssq.supabase.co';
+const supabaseKey = 'sb_publishable_Ryb06cnakJARRi4s-Hr9pQ_-Naf8BZt';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +22,15 @@ Future<void> main() async {
 
   await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
 
-  final supabase = Supabase.instance.client;
-
-  if (supabase.auth.currentSession == null) {
-    await supabase.auth.signInAnonymously();
+  // La sesión anónima es opcional: si falla (sin internet o desactivada en
+  // Supabase), la app arranca igual y usa el rol anon de la clave pública.
+  final auth = Supabase.instance.client.auth;
+  if (auth.currentSession == null) {
+    try {
+      await auth.signInAnonymously().timeout(const Duration(seconds: 10));
+    } catch (e) {
+      debugPrint('Sesión anónima no disponible: $e');
+    }
   }
 
   runApp(const MyApp());
@@ -49,6 +55,7 @@ class MyApp extends StatelessWidget {
         '/historial': (context) => const HistorialScreen(),
         '/detalle': (context) => const DetalleLectura(),
         '/estadisticas': (context) => const EstadisticasScreen(),
+        '/impactos': (context) => const ImpactosScreen(),
       },
     );
   }

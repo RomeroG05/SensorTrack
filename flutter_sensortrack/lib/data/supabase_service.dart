@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/evento_aceleracion.dart';
 import '../models/lectura.dart';
 
 /// Operaciones sobre la tabla sensor_readings de Supabase.
@@ -20,6 +21,24 @@ Future<List<Lectura>> obtenerLecturas() async {
       .order('recorded_at', ascending: false)
       .limit(1000);
   return filas.map(Lectura.fromMap).toList();
+}
+
+/// Tabla de eventos de cambio brusco de aceleración.
+const tablaEventos = 'acceleration_events';
+
+/// Guarda un evento detectado.
+Future<void> guardarEvento(EventoAceleracion evento) async {
+  await _db.from(tablaEventos).insert(evento.toMap());
+}
+
+/// Consulta los últimos eventos, del más reciente al más antiguo.
+Future<List<EventoAceleracion>> obtenerEventos() async {
+  final filas = await _db
+      .from(tablaEventos)
+      .select()
+      .order('detected_at', ascending: false)
+      .limit(100);
+  return filas.map(EventoAceleracion.fromMap).toList();
 }
 
 /// Devuelve true si Supabase responde y la tabla es accesible.

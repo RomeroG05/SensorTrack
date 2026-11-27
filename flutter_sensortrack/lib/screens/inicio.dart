@@ -90,6 +90,11 @@ class _InicioScreenState extends State<InicioScreen> {
           _opcion(Icons.location_on, 'Ubicación', '/ubicacion'),
           _opcion(Icons.history, 'Historial', '/historial'),
           _opcion(Icons.bar_chart, 'Estadísticas', '/estadisticas'),
+          _opcion(
+            Icons.warning_amber_rounded,
+            'Detección de impactos',
+            '/impactos',
+          ),
           const SizedBox(height: 16),
           Text(
             'Sensores disponibles',

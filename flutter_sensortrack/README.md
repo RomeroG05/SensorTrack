@@ -15,7 +15,8 @@ Aplicación móvil hecha con **Flutter** que lee los sensores del teléfono (ace
 | **Sensores** | Ver X, Y, Z del acelerómetro y el giroscopio en tiempo real. Guardar una medición o activar el guardado automático cada 5 segundos. |
 | **Ubicación** | Obtener latitud, longitud, precisión y hora. Guardarla en Supabase, siempre después de confirmar. |
 | **Historial** | Ver todas las mediciones guardadas y tocar una para ver su detalle. |
-| **Estadísticas** | Ver el total de registros, los registros por sensor, el mínimo y el máximo del acelerómetro, la última ubicación y un gráfico por sensor (acelerómetro, giroscopio y precisión del GPS). |
+| **Estadísticas** | Ver el total de registros, los registros por sensor, el mínimo y el máximo del acelerómetro, la última ubicación y un gráfico. |
+| **Detección de impactos** | Ver la intensidad del acelerómetro en tiempo real. Si hay un cambio brusco (golpe, caída o sacudida fuerte), la pantalla se pone roja, el teléfono vibra y el evento se guarda en Supabase. Debajo aparece el historial de eventos. |
 
 ## Sensores
 
@@ -31,7 +32,7 @@ Aplicación móvil hecha con **Flutter** que lee los sensores del teléfono (ace
 - **Supabase**: base de datos en la nube (PostgreSQL)
 - **sensors_plus**: acelerómetro y giroscopio
 - **geolocator**: GPS y permisos de ubicación
-- **fl_chart**: gráficos de estadísticas
+- **fl_chart**: gráfico de estadísticas
 
 ---
 
@@ -48,7 +49,7 @@ flutter pub get
 ### 2. Crear la base de datos
 
 1. Crea un proyecto en [supabase.com](https://supabase.com/).
-2. Ve a **SQL Editor**, pega el contenido de [`sql/sensor_readings.sql`](sql/sensor_readings.sql) y pulsa **Run**.
+2. Ve a **SQL Editor**, pega el contenido de [`sql/sensor_readings.sql`](sql/sensor_readings.sql) y pulsa **Run**. Repite con [`sql/acceleration_events.sql`](sql/acceleration_events.sql).
 3. Ve a **Project Settings → API** y copia la **Project URL** y la **Publishable key**.
 
 ### 3. Conectar la app
@@ -82,9 +83,11 @@ lib/
 ├── data/                  Datos
 │   ├── sensores.json        Lista de sensores
 │   ├── datos.dart           Carga el JSON
+│   ├── detector_impacto.dart  Detección de cambios bruscos (umbral)
 │   └── supabase_service.dart  Guardar y consultar en Supabase
 ├── models/                Clases de datos
 │   ├── lectura.dart         Una medición
+│   ├── evento_aceleracion.dart  Un evento de cambio brusco
 │   └── sensor_info.dart     Un sensor
 ├── screens/               Pantallas
 │   ├── splash.dart
@@ -93,11 +96,13 @@ lib/
 │   ├── ubicacion.dart
 │   ├── historial.dart
 │   ├── detalle_lectura.dart
-│   └── estadisticas.dart
+│   ├── estadisticas.dart
+│   └── impactos.dart
 └── widgets/               Piezas reutilizables
     ├── tarjeta_sensor.dart  Tarjeta con X, Y, Z y botón Guardar
     └── dato_fila.dart       Fila "etiqueta — valor"
-sql/sensor_readings.sql    Script de la base de datos
+sql/sensor_readings.sql    Script de la tabla de mediciones
+sql/acceleration_events.sql  Script de la tabla de eventos
 ```
 
 **Cómo fluyen los datos:**
@@ -120,6 +125,7 @@ La app usa **rutas con nombre**. Desde el menú de Inicio se abre cada pantalla:
 | `/historial` | Historial |
 | `/detalle` | Detalle de un registro (recibe la medición como argumento) |
 | `/estadisticas` | Estadísticas |
+| `/impactos` | Detección de impactos |
 
 ---
 
@@ -136,7 +142,31 @@ Todas las mediciones se guardan en la tabla **`sensor_readings`**:
 | `accuracy` | DOUBLE PRECISION | Precisión del GPS en metros |
 | `recorded_at` | TIMESTAMPTZ | Fecha y hora de la captura |
 
-**Seguridad (RLS):** la app solo puede **consultar** y **guardar** registros. No puede modificarlos ni borrarlos.
+Los cambios bruscos detectados se guardan en la tabla **`acceleration_events`**:
+
+| Campo | Tipo | Para qué sirve |
+| --- | --- | --- |
+| `id` | UUID | Identificador (lo genera Supabase) |
+| `x`, `y`, `z` | DOUBLE PRECISION | Valores del acelerómetro en el momento del evento |
+| `magnitude` | DOUBLE PRECISION | Magnitud \|a\| = √(x² + y² + z²) |
+| `intensity` | DOUBLE PRECISION | \| \|a\| − 9.81 \|, el valor comparado con el umbral |
+| `threshold` | DOUBLE PRECISION | Umbral usado en la detección |
+| `detected_at` | TIMESTAMPTZ | Fecha y hora del evento |
+
+**Seguridad (RLS):** en las dos tablas la app solo puede **consultar** y **guardar** registros. No puede modificarlos ni borrarlos.
+
+---
+
+## Detección de cambios bruscos
+
+La lógica está en [`lib/data/detector_impacto.dart`](lib/data/detector_impacto.dart) y la pantalla en [`lib/screens/impactos.dart`](lib/screens/impactos.dart).
+
+1. **Análisis:** con cada muestra del acelerómetro se calcula la magnitud `|a| = √(x² + y² + z²)`. En reposo solo se mide la gravedad, así que `|a| ≈ 9.81 m/s²`. La **intensidad** es cuánto se aleja de ese valor: `| |a| − 9.81 |`. Se usa la magnitud y no cada eje porque no depende de la orientación del teléfono.
+2. **Umbral: 12 m/s².** En reposo la intensidad es casi 0, y al caminar o manipular el teléfono queda entre 2 y 5 m/s². Un golpe, una caída o una sacudida fuerte supera los 12 m/s². El umbral es más del doble del movimiento normal, así que este no genera alertas falsas. Equivale a una aceleración total de ≈ 2.2 g, dentro del rango de 2–3 g que se usa habitualmente para detectar impactos.
+3. **Una alerta por golpe:** un golpe produce varias muestras seguidas sobre el umbral. Después de un evento se esperan **2 segundos** para que no se registre varias veces ni se llene la base de datos.
+4. **Muestreo rápido (~20 ms):** un golpe dura pocas decenas de milisegundos, y con un muestreo más lento se podría perder el pico.
+5. **Alerta visual:** la pantalla se pone roja durante 3 segundos, muestra la intensidad y el teléfono vibra.
+6. **Registro e historial:** el evento se guarda en `acceleration_events` y aparece al inicio del historial, que se carga desde Supabase.
 
 ---
 
@@ -151,7 +181,7 @@ Todas las mediciones se guardan en la tabla **`sensor_readings`**:
 ## Pruebas
 
 ```bash
-flutter test     # pruebas de los modelos y del catálogo de sensores
+flutter test     # pruebas de los modelos, del catálogo de sensores y del detector de impactos
 flutter analyze  # revisión del código
 ```
 
@@ -166,10 +196,11 @@ flutter analyze  # revisión del código
 | Datos en tiempo real | `sensores.dart`, `ubicacion.dart` |
 | Botón "Guardar medición" y registro en Supabase | `tarjeta_sensor.dart`, `supabase_service.dart` |
 | Historial y detalle | `historial.dart`, `detalle_lectura.dart` |
-| Estadísticas y gráficos | `estadisticas.dart` |
+| Estadísticas y gráfico | `estadisticas.dart` |
 | Iniciar y detener el monitoreo | Interruptor de guardado automático |
 | Permisos, errores y privacidad | `ubicacion.dart`, `supabase_service.dart` |
-| Políticas RLS y script SQL | `sql/sensor_readings.sql` |
+| Políticas RLS y script SQL | `sql/sensor_readings.sql`, `sql/acceleration_events.sql` |
+| Detección de cambios bruscos con umbral, alerta, registro e historial | `detector_impacto.dart`, `impactos.dart` |
 
 ## Evidencias
 
@@ -181,3 +212,4 @@ Pruebas en un dispositivo físico (Samsung Galaxy S24 Ultra):
 
 ---
 
+**Autor:** RomeroG05
